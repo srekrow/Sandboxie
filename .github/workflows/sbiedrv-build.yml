@@ -1,0 +1,37 @@
+name: Build SbieDrv x64
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Show ref info
+        shell: cmd
+        run: |
+          git log -1 --format="commit=%%H date=%%ci subject=%%s"
+          git describe --tags --always
+
+      - name: Build SbieDrv (SbieRelease x64)
+        shell: cmd
+        run: msbuild /t:build Sandboxie\SandboxDrv.sln /p:Configuration="SbieRelease" /p:Platform=x64 -maxcpucount:8 /v:m
+
+      - name: Show outputs
+        shell: pwsh
+        run: Get-ChildItem -Recurse -Include SbieDrv.sys,SboxDrv.pdb | Select-Object FullName,Length,LastWriteTime | Format-Table -AutoSize
+
+      - name: Upload SbieDrv.sys
+        uses: actions/upload-artifact@v4
+        with:
+          name: SbieDrv-x64-SbieRelease
+          path: "**/SbieDrv.sys"
+          if-no-files-found: error
